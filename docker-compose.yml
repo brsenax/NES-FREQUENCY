@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: nes_frequencia
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -19,7 +19,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/nes_frequencia
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/nes_frequencia
       SECRET_KEY: ${SECRET_KEY:-troque-isso-em-producao-openssl-rand-hex-32}
       CORS_ORIGINS: '["http://localhost:5173","http://localhost:3000","http://localhost"]'
     depends_on:

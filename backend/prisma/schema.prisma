@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PerfilEnum {
+  admin
+  professor
+  aluno
+}
+
+enum ModoEnum {
+  qr
+  hibrido
+}
+
+enum MetodoCheckin {
+  qr
+  token
+  manual
+}
+
+enum ModalidadeEnum {
+  presencial
+  online
+}
+
+model User {
+  id             Int                  @id @default(autoincrement())
+  nome           String
+  email          String?              @unique
+  matricula      String?              @unique
+  senhaHash      String
+  perfil         PerfilEnum           @default(aluno)
+  ativo          Boolean              @default(true)
+  criadoEm       DateTime             @default(now())
+  atualizadoEm   DateTime             @updatedAt
+  disciplinasProf DisciplinaProfessor[]
+  disciplinasAluno DisciplinaAluno[]
+  sessoes        Sessao[]
+  presencas      Presenca[]
+}
+
+model Disciplina {
+  id          Int                  @id @default(autoincrement())
+  nome        String
+  modo        ModoEnum             @default(qr)
+  cor         String               @default("#3b82f6")
+  ativa       Boolean              @default(true)
+  criadoEm    DateTime             @default(now())
+  professores DisciplinaProfessor[]
+  alunos      DisciplinaAluno[]
+  sessoes     Sessao[]
+}
+
+model DisciplinaProfessor {
+  id           Int       @id @default(autoincrement())
+  disciplina   Disciplina @relation(fields: [disciplinaId], references: [id])
+  disciplinaId Int
+  professor    User       @relation(fields: [professorId], references: [id])
+  professorId  Int
+  @@unique([disciplinaId, professorId])
+}
+
+model DisciplinaAluno {
+  id           Int       @id @default(autoincrement())
+  disciplina   Disciplina @relation(fields: [disciplinaId], references: [id])
+  disciplinaId Int
+  aluno        User       @relation(fields: [alunoId], references: [id])
+  alunoId      Int
+  @@unique([disciplinaId, alunoId])
+}
+
+model Sessao {
+  id             Int             @id @default(autoincrement())
+  disciplina     Disciplina      @relation(fields: [disciplinaId], references: [id])
+  disciplinaId   Int
+  professor      User            @relation(fields: [professorId], references: [id])
+  professorId    Int
+  descricao      String?         
+  data           String
+  tokenAtual     String?
+  tokenEmitidoEm DateTime?
+  ativa          Boolean         @default(true)
+  criadoEm       DateTime        @default(now())
+  encerradoEm    DateTime?
+  presencas      Presenca[]
+}
+
+model Presenca {
+  id         Int            @id @default(autoincrement())
+  sessao     Sessao         @relation(fields: [sessaoId], references: [id])
+  sessaoId   Int
+  aluno      User           @relation(fields: [alunoId], references: [id])
+  alunoId    Int
+  presente   Boolean        @default(true)
+  modalidade ModalidadeEnum @default(presencial)
+  metodo     MetodoCheckin  @default(token)
+  checkinEm  DateTime       @default(now())
+}

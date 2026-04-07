@@ -1,31 +1,41 @@
+import axios from 'axios';
+
 const BASE = import.meta.env.VITE_API_URL || '';
 
-function getToken() {
-  return localStorage.getItem('nes_token');
-}
+const instance = axios.create({
+  baseURL: BASE,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+instance.interceptors.request.use((config) => {
+  const token = localStorage.getItem('nes_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+instance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const response = error.response;
+    if (response?.status === 401) {
+      localStorage.removeItem('nes_token');
+      localStorage.removeItem('nes_user');
+      window.location.href = '/login';
+      return Promise.reject(new Error('Não autorizado'));
+    }
+    const detail = response?.data?.detail || response?.data?.message || 'Erro desconhecido';
+    return Promise.reject(new Error(detail));
+  }
+);
 
 async function request(path, options = {}) {
-  const token = getToken();
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
-
-  if (res.status === 401) {
-    localStorage.removeItem('nes_token');
-    localStorage.removeItem('nes_user');
-    window.location.href = '/login';
-    throw new Error('Não autorizado');
-  }
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Erro desconhecido' }));
-    throw new Error(err.detail || `Erro ${res.status}`);
-  }
-
-  if (res.status === 204) return null;
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
+  const { body, ...rest } = options;
+  const response = await instance(path, { ...rest, data: body });
+  return response.data;
 }
 
 const api = {

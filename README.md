@@ -9,14 +9,14 @@ Sistema completo de controle de frequência escolar com suporte a aulas presenci
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
 │   Frontend   │────▶│   Backend    │────▶│  PostgreSQL   │
-│  React+Vite  │ API │   FastAPI    │     │              │
-│  port 5173   │     │  port 8000   │     │  port 5432   │
+│  React+Vite  │ API │   Express    │     │              │
+│  port 80     │     │  port 8000   │     │  port 5432   │
 └──────────────┘     └──────────────┘     └──────────────┘
 ```
 
-**Frontend:** React 18 + Vite + React Router  
-**Backend:** FastAPI + SQLAlchemy (async) + JWT + bcrypt  
-**Banco:** PostgreSQL 16 com asyncpg  
+**Frontend:** React 18 + Vite + React Router + Axios  
+**Backend:** Express + Prisma ORM + JWT + bcryptjs  
+**Banco:** PostgreSQL 16  
 **Deploy:** Docker Compose (ou serviços separados)
 
 ---
@@ -27,38 +27,40 @@ Sistema completo de controle de frequência escolar com suporte a aulas presenci
 nes-frequencia/
 ├── docker-compose.yml
 ├── README.md
+├── docs/
+│   ├── README.md
+│   ├── api.md
+│   ├── architecture.md
+│   ├── backend.md
+│   ├── deployment.md
+│   └── frontend.md
 ├── backend/
 │   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── .env.example
-│   └── app/
-│       ├── main.py              # Entry point FastAPI
-│       ├── seed.py              # Seed inicial
-│       ├── core/
-│       │   ├── config.py        # Settings (pydantic)
-│       │   ├── database.py      # Engine + session
-│       │   └── security.py      # JWT + bcrypt + guards
-│       ├── models/
-│       │   ├── user.py          # User (admin/prof/aluno)
-│       │   ├── disciplina.py    # Disciplina + pivots
-│       │   └── sessao.py        # Sessao + Presenca
-│       ├── schemas/
-│       │   └── schemas.py       # Pydantic schemas
-│       ├── services/
-│       │   └── token_service.py # Token rotation
-│       └── api/
-│           ├── auth.py          # Login + /me
-│           ├── users.py         # CRUD usuários
-│           ├── disciplinas.py   # CRUD disciplinas
-│           ├── sessoes.py       # Sessões + token
-│           ├── checkin.py       # Check-in (token + manual)
-│           └── relatorios.py    # Relatórios
+│   ├── package.json
+│   ├── prisma/
+│   │   └── schema.prisma
+│   └── src/
+│       ├── index.js              # Entry point Express
+│       ├── seed.js               # Seed inicial
+│       ├── config.js             # Configurações
+│       ├── prisma.js             # Cliente Prisma
+│       ├── middleware/
+│       │   └── auth.js           # JWT + guards
+│       ├── models/               # (Prisma handles models)
+│       ├── routes/
+│       │   ├── auth.js           # Login + /me
+│       │   ├── users.js          # CRUD usuários
+│       │   ├── disciplinas.js    # CRUD disciplinas
+│       │   ├── sessoes.js        # Sessões + token
+│       │   ├── checkin.js        # Check-in (token + manual)
+│       │   └── relatorios.js     # Relatórios
+│       └── services/
+│           └── tokenService.js   # Token rotation
 └── frontend/
     ├── Dockerfile
     ├── nginx.conf
     ├── package.json
     ├── vite.config.js
-    ├── .env.example
     ├── index.html
     └── src/
         ├── main.jsx
@@ -127,24 +129,19 @@ O professor inicia uma sessão e um **código numérico de 6 dígitos** aparece 
 ## 5. Rodar Localmente (sem Docker)
 
 ### Pré-requisitos
-- Python 3.11+
-- Node.js 18+
+- Node.js 20+
+- npm
 - PostgreSQL rodando na porta 5432
 
 ### Backend
 
 ```bash
 cd backend
-cp .env.example .env        # edite se necessário
-pip install -r requirements.txt
-# Criar banco
-createdb nes_frequencia      # ou via psql
-
-# Rodar seed
-python -m app.seed
-
-# Iniciar servidor
-uvicorn app.main:app --reload --port 8000
+npm install
+npx prisma generate
+npx prisma db push
+npm run seed
+npm run dev
 ```
 
 ### Frontend
@@ -155,7 +152,7 @@ npm install
 npm run dev
 ```
 
-Acesse **http://localhost:5173**
+Acesse **http://localhost:5173** (frontend) e **http://localhost:8000** (backend API)
 
 ---
 
@@ -168,10 +165,15 @@ docker compose up --build
 Depois rode o seed:
 
 ```bash
-docker compose exec backend python -m app.seed
+docker compose exec backend npm run seed
 ```
 
 Acesse **http://localhost** (porta 80)
+
+### Serviços disponíveis
+- `db` — PostgreSQL 16 (porta 5433)
+- `backend` — Express + Prisma (porta 8000)
+- `frontend` — React + Nginx (porta 80)
 
 ---
 
@@ -187,15 +189,15 @@ Acesse **http://localhost** (porta 80)
 
 ---
 
-## 8. Deploy em Produção
+## 8. Documentação Adicional
 
-### Opção A: Render.com
+Para mais detalhes sobre a arquitetura, API, e desenvolvimento, consulte a pasta `docs/`:
 
-**Backend (Web Service):**
-- Root directory: `backend`
-- Build: `pip install -r requirements.txt`
-- Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- Env vars: DATABASE_URL, SECRET_KEY, CORS_ORIGINS
+- [Arquitetura](docs/architecture.md)
+- [Backend](docs/backend.md)
+- [Frontend](docs/frontend.md)
+- [API](docs/api.md)
+- [Deploy](docs/deployment.md)
 
 **Frontend (Static Site):**
 - Root directory: `frontend`

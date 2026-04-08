@@ -8,6 +8,11 @@ import sessoesRoutes from './routes/sessoes.js';
 import checkinRoutes from './routes/checkin.js';
 import relatoriosRoutes from './routes/relatorios.js';
 
+// Garante que stdin não bloqueia o processo em containers
+if (!process.stdin.isTTY) {
+  process.stdin.resume();
+}
+
 const app = express();
 const port = process.env.PORT ? Number(process.env.PORT) : 8000;
 

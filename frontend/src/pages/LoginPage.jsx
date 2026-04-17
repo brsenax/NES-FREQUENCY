@@ -3,14 +3,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const S = {
-  page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#1e293b,#0f172a)', padding: 20 },
+  page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#2e1065,#4c1d95)', padding: 20 },
   card: { background: '#fff', borderRadius: 16, padding: 36, width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,.2)' },
   h1: { margin: 0, fontSize: 28, fontWeight: 800, color: '#1e293b', letterSpacing: '.04em', textAlign: 'center' },
   sub: { textAlign: 'center', color: '#64748b', fontSize: 14, margin: '6px 0 28px' },
   field: { display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 16 },
   label: { fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.04em' },
   input: { padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 15, color: '#1e293b' },
-  btn: { width: '100%', padding: 12, border: 'none', borderRadius: 9, background: '#1e40af', color: '#fff', fontSize: 15, fontWeight: 600, marginTop: 8 },
+  btn: { width: '100%', padding: 12, border: 'none', borderRadius: 9, background: '#006400', color: '#fff', fontSize: 15, fontWeight: 600, marginTop: 8 },
   error: { background: '#fef2f2', color: '#dc2626', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, textAlign: 'center' },
   hint: { marginTop: 20, padding: 14, background: '#f8fafc', borderRadius: 8, fontSize: 12, color: '#64748b', lineHeight: 1.6 },
 };

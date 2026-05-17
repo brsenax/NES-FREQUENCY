@@ -23,7 +23,7 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     if not user or not verify_password(body.senha, user.senha_hash):
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
 
-    token = create_access_token({"sub": user.id, "perfil": user.perfil.value})
+    token = create_access_token({"sub": str(user.id), "perfil": user.perfil.value})
     return TokenResponse(
         access_token=token,
         user=UserOut.model_validate(user),

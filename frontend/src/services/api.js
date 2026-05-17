@@ -43,6 +43,7 @@ const api = {
   // Disciplinas
   listDisciplinas: () => request('/api/disciplinas/'),
   createDisciplina: (data) => request('/api/disciplinas/', { method: 'POST', body: JSON.stringify(data) }),
+  deleteDisciplina: (id) => request(`/api/disciplinas/${id}`, { method: 'DELETE' }),
   assignProfessor: (discId, profId) => request(`/api/disciplinas/${discId}/professores/${profId}`, { method: 'POST' }),
   enrollAluno: (discId, alunoId) => request(`/api/disciplinas/${discId}/alunos/${alunoId}`, { method: 'POST' }),
   unenrollAluno: (discId, alunoId) => request(`/api/disciplinas/${discId}/alunos/${alunoId}`, { method: 'DELETE' }),

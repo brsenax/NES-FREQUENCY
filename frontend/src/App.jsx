@@ -8,6 +8,7 @@ import HistoricoPage from './pages/HistoricoPage';
 import RelatorioPage from './pages/RelatorioPage';
 import AlunoCheckinPage from './pages/AlunoCheckinPage';
 import AlunoFrequenciaPage from './pages/AlunoFrequenciaPage';
+import DisciplinasPage from './pages/DisciplinasPage';
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -48,6 +49,9 @@ export default function App() {
         } />
         <Route path="relatorio" element={
           <ProtectedRoute roles={['admin', 'professor']}><RelatorioPage /></ProtectedRoute>
+        } />
+        <Route path="disciplinas" element={
+          <ProtectedRoute roles={['admin']}><DisciplinasPage /></ProtectedRoute>
         } />
 
         {/* Aluno */}

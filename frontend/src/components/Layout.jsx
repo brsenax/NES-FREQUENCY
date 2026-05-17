@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const S = {
   wrap: { display: 'flex', flexDirection: 'column', minHeight: '100vh' },
-  header: { background: 'linear-gradient(135deg,#1e293b,#334155)', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  header: { background: 'linear-gradient(135deg,#3b0764,#6d28d9)', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   brand: { display: 'flex', alignItems: 'center', gap: 10 },
   h1: { margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '.06em' },
   sub: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
@@ -28,12 +28,20 @@ export default function Layout() {
         { to: '/checkin', label: 'Marcar Presença' },
         { to: '/frequencia', label: 'Minhas Frequências' },
       ]
-    : [
-        { to: '/sessao', label: 'Sessão / Chamada' },
-        { to: '/alunos', label: 'Alunos' },
-        { to: '/historico', label: 'Histórico' },
-        { to: '/relatorio', label: 'Relatório' },
-      ];
+    : perfil === 'admin'
+      ? [
+          { to: '/sessao', label: 'Sessão / Chamada' },
+          { to: '/alunos', label: 'Alunos' },
+          { to: '/historico', label: 'Histórico' },
+          { to: '/relatorio', label: 'Relatório' },
+          { to: '/disciplinas', label: 'Disciplinas' },
+        ]
+      : [
+          { to: '/sessao', label: 'Sessão / Chamada' },
+          { to: '/alunos', label: 'Alunos' },
+          { to: '/historico', label: 'Histórico' },
+          { to: '/relatorio', label: 'Relatório' },
+        ];
 
   return (
     <div style={S.wrap}>

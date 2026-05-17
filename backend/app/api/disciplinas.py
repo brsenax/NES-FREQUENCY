@@ -49,6 +49,21 @@ async def create_disciplina(
     return DisciplinaOut.model_validate(disc)
 
 
+@router.delete("/{disc_id}")
+async def delete_disciplina(
+    disc_id: int,
+    db: AsyncSession = Depends(get_db),
+    current: User = Depends(require_role("admin")),
+):
+    result = await db.execute(select(Disciplina).where(Disciplina.id == disc_id))
+    disc = result.scalar_one_or_none()
+    if not disc:
+        raise HTTPException(status_code=404, detail="Disciplina não encontrada")
+    await db.delete(disc)
+    await db.commit()
+    return {"ok": True}
+
+
 @router.post("/{disc_id}/professores/{prof_id}")
 async def assign_professor(
     disc_id: int, prof_id: int,

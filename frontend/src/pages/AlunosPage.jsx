@@ -1,181 +1,166 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
-const C = {
-  card: { background: '#fff', borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05)', border: '1px solid #f1f5f9' },
-  title: { margin: 0, fontSize: 16, fontWeight: 600, color: '#0f172a' },
-  muted: { fontSize: 12, color: '#94a3b8', marginTop: 4 },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10, marginTop: 12 },
-  field: { display: 'flex', flexDirection: 'column', gap: 4 },
-  label: { fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase' },
-  input: { padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 14 },
-  select: { padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 14 },
-  textarea: { padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 14, width: '100%', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' },
-  formBox: { marginTop: 14, padding: 14, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' },
-  btnPri: { padding: '7px 14px', border: 'none', borderRadius: 7, background: '#1e40af', color: '#fff', fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5 },
-  btnSm: { padding: '7px 14px', border: '1px solid #e2e8f0', borderRadius: 7, background: '#fff', color: '#64748b', fontSize: 12, fontWeight: 500 },
-  iconBtn: { width: 30, height: 30, borderRadius: 6, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 },
-  searchBox: { display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 7, background: '#f8fafc', marginBottom: 10 },
-  searchInput: { border: 'none', outline: 'none', background: 'none', fontSize: 14, flex: 1 },
-  row: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 7, animation: 'fadeIn .12s ease both' },
-  badge: { fontSize: 9, padding: '1px 5px', borderRadius: 3, fontWeight: 600, display: 'inline-block' },
+// --- Subcomponente de Relatório ---
+const ReportSection = ({ data, loading }) => {
+  if (loading) return <div className="p-3 text-xs text-slate-400 animate-pulse">Carregando dados...</div>;
+  if (data?.error) return <div className="p-3 text-xs text-red-500">{data.error}</div>;
+
+  return (
+    <div className="mt-2.5 p-4 bg-slate-50 rounded-lg border-l-4 border-blue-800 grid grid-cols-3 gap-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+      <div>
+        <span className="text-[11px] font-bold text-slate-500 uppercase block">Presença</span>
+        <div className="font-semibold text-slate-900">{data.frequencia}%</div>
+      </div>
+      <div>
+        <span className="text-[11px] font-bold text-slate-500 uppercase block">Atividades</span>
+        <div className="font-semibold text-slate-900">{data.completas}/{data.total}</div>
+      </div>
+      <div>
+        <span className="text-[11px] font-bold text-slate-500 uppercase block">Média</span>
+        <div className="font-semibold text-blue-800">{data.media}</div>
+      </div>
+    </div>
+  );
 };
 
 export default function AlunosPage() {
   const { user } = useAuth();
+  const [state, setState] = useState({
+    alunos: [],
+    disciplinas: [],
+    loading: true,
+    search: '',
+    filterDisc: '',
+    selectedReportId: null,
+    reportData: null,
+    reportLoading: false,
+  });
+
   const isAdmin = user?.perfil === 'admin';
-  const [alunos, setAlunos] = useState([]);
-  const [disciplinas, setDisciplinas] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [showBulk, setShowBulk] = useState(false);
-  const [search, setSearch] = useState('');
-  const [filterDisc, setFilterDisc] = useState('');
+  const isProfessor = user?.perfil === 'professor' || isAdmin;
 
-  // Form state
-  const [nome, setNome] = useState('');
-  const [email, setEmail] = useState('');
-  const [matricula, setMatricula] = useState('');
-  const [senha, setSenha] = useState('nes2026');
-  const [editId, setEditId] = useState(null);
-
-  // Bulk state
-  const [bulkText, setBulkText] = useState('');
-  const [bulkDiscs, setBulkDiscs] = useState([]);
-
-  useEffect(() => {
-    loadAlunos();
-    api.listDisciplinas().then(setDisciplinas).catch(() => {});
+  const loadInitialData = useCallback(async () => {
+    try {
+      const [alunosData, discData] = await Promise.all([
+        api.listUsers('perfil=aluno'),
+        api.listDisciplinas()
+      ]);
+      setState(prev => ({ ...prev, alunos: alunosData, disciplinas: discData, loading: false }));
+    } catch (err) {
+      console.error("Erro ao carregar dados", err);
+    }
   }, []);
 
-  const loadAlunos = async () => {
+  useEffect(() => { loadInitialData(); }, [loadInitialData]);
+
+  const handleToggleReport = async (alunoId) => {
+    if (state.selectedReportId === alunoId) {
+      setState(prev => ({ ...prev, selectedReportId: null, reportData: null }));
+      return;
+    }
+
+    setState(prev => ({ ...prev, selectedReportId: alunoId, reportLoading: true }));
     try {
-      const params = new URLSearchParams({ perfil: 'aluno' });
-      if (filterDisc) params.append('disciplina_id', filterDisc);
-      const data = await api.listUsers(params.toString());
-      setAlunos(data);
-    } catch {}
+      const data = await api.getUserStats(alunoId);
+      setState(prev => ({ ...prev, reportData: data, reportLoading: false }));
+    } catch {
+      setState(prev => ({ ...prev, reportData: { error: 'Falha ao carregar' }, reportLoading: false }));
+    }
   };
 
-  useEffect(() => { loadAlunos(); }, [filterDisc]);
-
-  const resetForm = () => { setNome(''); setEmail(''); setMatricula(''); setSenha('nes2026'); setEditId(null); setShowForm(false); };
-
-  const handleSave = async () => {
-    if (!nome.trim()) return;
-    try {
-      if (editId) {
-        await api.updateUser(editId, { nome, email: email || null, matricula: matricula || null, senha: senha || undefined });
-      } else {
-        await api.createUser({ nome, email: email || null, matricula: matricula || null, senha, perfil: 'aluno' });
-      }
-      await loadAlunos();
-      resetForm();
-    } catch (e) { alert(e.message); }
-  };
-
-  const handleBulk = async () => {
-    if (!bulkText.trim() || bulkDiscs.length === 0) return;
-    const nomes = bulkText.split('\n').map(l => l.trim()).filter(Boolean);
-    try {
-      await api.bulkCreateUsers({ nomes, perfil: 'aluno', disciplina_ids: bulkDiscs.map(Number), senha_padrao: 'nes2026' });
-      await loadAlunos();
-      setBulkText(''); setShowBulk(false);
-    } catch (e) { alert(e.message); }
-  };
-
-  const handleEdit = (a) => {
-    setNome(a.nome); setEmail(a.email || ''); setMatricula(a.matricula || ''); setSenha('');
-    setEditId(a.id); setShowForm(true); setShowBulk(false);
-  };
-
-  const handleDelete = async (id) => {
-    if (!confirm('Desativar aluno?')) return;
-    await api.deleteUser(id);
-    await loadAlunos();
-  };
-
-  const filtered = alunos.filter(a => search ? a.nome.toLowerCase().includes(search.toLowerCase()) : true);
+  const filteredAlunos = useMemo(() => {
+    return state.alunos.filter(a => {
+      const matchesSearch = a.nome.toLowerCase().includes(state.search.toLowerCase());
+      const matchesDisc = !state.filterDisc || a.disciplina_id === Number(state.filterDisc);
+      return matchesSearch && matchesDisc;
+    });
+  }, [state.alunos, state.search, state.filterDisc]);
 
   return (
-    <div>
-      <div style={C.card}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-          <div><h2 style={C.title}>Gerenciar Alunos</h2><p style={C.muted}>{alunos.length} alunos</p></div>
+    <div className="max-w-3xl mx-auto p-4 space-y-4">
+      {/* Header Card */}
+      <header className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900 m-0">Gestão Acadêmica</h2>
+            <p className="text-xs text-slate-400 mt-1">{filteredAlunos.length} alunos encontrados</p>
+          </div>
           {isAdmin && (
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button style={C.btnSm} onClick={() => { setShowBulk(!showBulk); setShowForm(false); }}>Em lote</button>
-              <button style={C.btnPri} onClick={() => { resetForm(); setShowForm(true); setShowBulk(false); }}>+ Novo</button>
-            </div>
+            <button className="bg-blue-800 text-white text-xs font-medium px-3.5 py-2 rounded-md hover:bg-blue-900 transition-colors flex items-center gap-1.5 shadow-sm">
+              <span>+</span> Novo Aluno
+            </button>
           )}
         </div>
-
-        {showForm && isAdmin && (
-          <div style={C.formBox}>
-            <div style={C.grid}>
-              <div style={C.field}><label style={C.label}>Nome *</label><input style={C.input} value={nome} onChange={e => setNome(e.target.value)} /></div>
-              <div style={C.field}><label style={C.label}>Email</label><input style={C.input} value={email} onChange={e => setEmail(e.target.value)} /></div>
-              <div style={C.field}><label style={C.label}>Matrícula</label><input style={C.input} value={matricula} onChange={e => setMatricula(e.target.value)} /></div>
-              <div style={C.field}><label style={C.label}>Senha</label><input style={C.input} value={senha} onChange={e => setSenha(e.target.value)} placeholder={editId ? 'Deixe vazio para manter' : 'nes2026'} /></div>
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button style={C.btnPri} onClick={handleSave}>{editId ? 'Atualizar' : 'Cadastrar'}</button>
-              <button style={C.btnSm} onClick={resetForm}>Cancelar</button>
-            </div>
+        
+        <div className="flex gap-2.5">
+          <div className="flex-1">
+            <input 
+              className="w-full px-2.5 py-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-800/20 focus:border-blue-800 transition-all"
+              placeholder="Pesquisar por nome..." 
+              onChange={e => setState(p => ({ ...p, search: e.target.value }))}
+            />
           </div>
-        )}
-
-        {showBulk && isAdmin && (
-          <div style={C.formBox}>
-            <p style={{ ...C.muted, margin: '0 0 8px' }}>Um nome por linha. Selecione disciplinas abaixo.</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
-              {disciplinas.map(d => (
-                <button key={d.id} onClick={() => setBulkDiscs(prev => prev.includes(d.id) ? prev.filter(x => x !== d.id) : [...prev, d.id])}
-                  style={{ ...C.badge, padding: '4px 10px', fontSize: 11, cursor: 'pointer', border: `1px solid ${bulkDiscs.includes(d.id) ? d.cor : '#e2e8f0'}`, background: bulkDiscs.includes(d.id) ? d.cor : '#f1f5f9', color: bulkDiscs.includes(d.id) ? '#fff' : '#64748b' }}>
-                  {d.nome}
-                </button>
-              ))}
-            </div>
-            <textarea style={C.textarea} rows={6} value={bulkText} onChange={e => setBulkText(e.target.value)} placeholder={"Maria Silva\nJoão Santos"} />
-            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-              <button style={C.btnPri} onClick={handleBulk}>Adicionar {bulkText.split('\n').filter(l => l.trim()).length}</button>
-              <button style={C.btnSm} onClick={() => setShowBulk(false)}>Cancelar</button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div style={C.card}>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
-          <div style={{ ...C.searchBox, flex: 1, minWidth: 180, marginBottom: 0 }}>
-            <input style={C.searchInput} placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <select style={{ ...C.select, width: 200 }} value={filterDisc} onChange={e => setFilterDisc(e.target.value)}>
-            <option value="">Todas</option>
-            {disciplinas.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+          <select 
+            className="w-[200px] px-2.5 py-2 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-800/20 transition-all"
+            onChange={e => setState(p => ({ ...p, filterDisc: e.target.value }))}
+          >
+            <option value="">Todas as Disciplinas</option>
+            {state.disciplinas.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
           </select>
         </div>
+      </header>
 
-        {filtered.length === 0 ? <div style={{ textAlign: 'center', padding: 28, color: '#94a3b8', fontSize: 13 }}>Nenhum aluno.</div> : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {filtered.map((a, i) => (
-              <div key={a.id} style={{ ...C.row, animation: `fadeIn .1s ease ${i * .01}s both` }}>
-                <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, color: '#94a3b8' }}>{i + 1}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>{a.nome}</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{a.matricula || ''}{a.email ? ` · ${a.email}` : ''}</div>
+      {/* List Card */}
+      <section className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+        {state.loading ? (
+            <div className="text-center py-10 text-slate-400 text-sm">Carregando lista...</div>
+        ) : filteredAlunos.length === 0 ? (
+            <div className="text-center py-10 text-slate-400 text-sm">Nenhum aluno encontrado.</div>
+        ) : (
+          <div className="flex flex-col">
+            {filteredAlunos.map((aluno, i) => (
+              <div key={aluno.id} className="border-b border-slate-50 last:border-0 py-1.5">
+                <div 
+                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md transition-colors duration-200 ${
+                    state.selectedReportId === aluno.id ? 'bg-slate-50' : 'hover:bg-slate-50/50'
+                  }`}
+                >
+                  <span className="text-xs text-slate-400 w-5 font-medium">{i + 1}</span>
+                  <div className="flex-1 truncate">
+                    <div className="text-[13px] font-medium text-slate-900 truncate">{aluno.nome}</div>
+                    <div className="text-[11px] text-slate-400">{aluno.matricula || 'Sem matrícula'}</div>
+                  </div>
+                  
+                  <div className="flex gap-1">
+                    {isProfessor && (
+                      <button 
+                        onClick={() => handleToggleReport(aluno.id)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm transition-all ${
+                          state.selectedReportId === aluno.id ? 'text-blue-800 grayscale-0 scale-110' : 'grayscale text-slate-400'
+                        }`}
+                        title="Ver Relatório"
+                      >
+                        {state.selectedReportId === aluno.id ? '✖️' : '📊'}
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-slate-400 hover:text-blue-800 transition-all">
+                        ✏️
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {isAdmin && (
-                  <>
-                    <button style={C.iconBtn} onClick={() => handleEdit(a)} title="Editar">✏️</button>
-                    <button style={C.iconBtn} onClick={() => handleDelete(a.id)} title="Desativar">🗑️</button>
-                  </>
+
+                {state.selectedReportId === aluno.id && (
+                  <ReportSection data={state.reportData} loading={state.reportLoading} />
                 )}
               </div>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
